@@ -1,25 +1,51 @@
 import React from 'react';
-import logo from './logo.svg';
-import './App.css';
+import { BrowserRouter as Router, Redirect, Route, RouteProps, Switch, useLocation } from 'react-router-dom';
+import AuthUserProvider, { useAuthUser } from './AuthUserContext';
+import LogoutPage from './LogoutPage';
+import LoginPage from './LoginPage';
+import HomePage from './HomePage';
+import ProfilePage from './ProfilePage';
 
-function App() {
+
+
+const UnAuthRoute: React.FC<RouteProps> = ({ ...props }) => {
+  const authUser = useAuthUser()
+  const isAuthenticated = authUser != null
+  const { from } = useLocation<{from: string | undefined}>().state
+  
+  if (isAuthenticated) {
+    console.log(`ログイン済みのユーザーは${props.path}へはアクセスできません`)
+    return <Redirect to={from ?? "/"} />
+  } else {
+    return <Route {...props} />
+  }
+}
+
+const PrivateRoute: React.FC<RouteProps> = ({...props}) => {
+  const authUser = useAuthUser()
+  const isAuthenticated = authUser != null
+  if (isAuthenticated) {
+    return <Route {...props}/>
+  }else{
+    console.log(`ログインしていないユーザーは${props.path}へはアクセスできません`)
+    return <Redirect to={{pathname: "/login", state: { from: props.location?.pathname }}}/>
+  }
+}
+
+
+const App: React.FC = () => {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <AuthUserProvider>
+      <Router>
+        <Switch>
+          <UnAuthRoute exact path="/login" component={LoginPage}/>
+          <UnAuthRoute exact path="/logout" component={LogoutPage}/>
+          <PrivateRoute exact path="/" component={HomePage} />
+          <PrivateRoute exact path="/profile/:userId" component={ProfilePage}/>
+          <Redirect to="/"/>
+        </Switch>
+      </Router>
+    </AuthUserProvider>
   );
 }
 
